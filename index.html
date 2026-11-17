@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Healthcare Awareness Chatbot</title>
+<style>
+:root{--bg:#f4f8f7;--card:#fff;--text:#16302b;--muted:#5b716c;--accent:#0f8a73;--accent-t:#fff;--user:#d9f2ec;--border:#d5e3df;--warn:#fff1e0;--warn-t:#7a3d00;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1917;--card:#162623;--text:#e3f1ee;--muted:#93aaa5;--accent:#2fbfa3;--accent-t:#06231d;--user:#1d4a41;--border:#26403b;--warn:#3a2a14;--warn-t:#ffd9a8}}
+:root[data-theme="dark"]{--bg:#0e1917;--card:#16262a;--text:#e3f1ee;--muted:#93aaa5;--accent:#2fbfa3;--accent-t:#06231d;--user:#1d4a41;--border:#26403b;--warn:#3a2a14;--warn-t:#ffd9a8}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{max-width:760px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:12px}
+header{display:flex;align-items:center;gap:10px;padding:6px 4px}
+header h1{font-size:1.15rem;margin:0}
+header p{margin:0;font-size:.8rem;color:var(--muted)}
+.logo{font-size:1.8rem}
+.note{background:var(--warn);color:var(--warn-t);border-radius:10px;padding:8px 12px;font-size:.82rem;margin:6px 0}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:6px 0}
+.chip{flex:none;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:7px 13px;font-size:.85rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+#chat{flex:1;overflow-y:auto;padding:8px 2px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-wrap:break-word;border:1px solid var(--border)}
+.bot{background:var(--card);align-self:flex-start;border-bottom-left-radius:4px}
+.me{background:var(--user);align-self:flex-end;border-bottom-right-radius:4px}
+.emg{background:var(--warn);color:var(--warn-t);border-color:var(--warn-t)}
+form{display:flex;gap:8px;padding-top:8px}
+input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font:inherit}
+input:focus{outline:2px solid var(--accent)}
+button.send{background:var(--accent);color:var(--accent-t);border:0;border-radius:12px;padding:0 20px;font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.foot{font-size:.72rem;color:var(--muted);text-align:center;padding-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">🩺</div>
+    <div><h1>AI Healthcare Awareness Chatbot</h1><p>Hygiene · Nutrition · Healthy habits · Disease prevention</p></div>
+  </header>
+  <div class="note">General health education only. This bot does not diagnose diseases or replace a doctor’s advice.</div>
+  <div class="chips" id="chips"></div>
+  <div id="chat" aria-live="polite"></div>
+  <form id="f">
+    <input id="q" placeholder="Ask a health-related question…" autocomplete="off" maxlength="400">
+    <button class="send" id="go">Send</button>
+  </form>
+  <div class="foot">Always consult a qualified doctor for medical concerns.</div>
+</div>
+<script>
+const TOPICS={
+ "🧼 Hand hygiene":["Why is handwashing important and how should I do it?","Wash hands with soap and clean water for at least 20 seconds: palms, backs of hands, between fingers, thumbs and under nails. Do this before eating or cooking, after using the toilet, and after coughing or sneezing. It prevents many infections such as diarrhoea and flu.\n\nThis is general information, not medical advice."],
+ "🥗 Balanced diet":["What does a balanced diet include?","A balanced plate has vegetables and fruits, whole grains, protein (pulses, eggs, fish, dairy or lean meat), and healthy fats like nuts and seeds. Limit sugar, salt and deep-fried foods, and drink enough water.\n\nThis is general information, not medical advice."],
+ "😴 Better sleep":["Give me healthy sleep habits.","Keep a fixed sleep and wake time, avoid screens and caffeine late in the day, keep the room dark and cool, and get daylight and some exercise during the day. Most adults need about 7–9 hours.\n\nThis is general information, not medical advice."],
+ "🦟 Dengue prevention":["How can I prevent dengue?","Don’t let water stagnate in pots, tyres or coolers, and empty and scrub water containers weekly. Use mosquito nets or repellents and wear full-sleeve clothes, especially in the daytime. If you get high fever with body pain, see a doctor early.\n\nThis is general information, not medical advice."],
+ "💧 Hydration":["Why does hydration matter?","Water helps regulate body temperature, digestion and energy. Needs vary with weather, activity and health, so drink regularly through the day and more in hot weather. Pale yellow urine is a simple sign of good hydration.\n\nThis is general information, not medical advice."],
+ "🧘 Stress":["What are simple ways to manage stress?","Try regular exercise, slow deep breathing, enough sleep, short breaks, and talking with someone you trust. If stress affects daily life for weeks, speak with a counsellor or doctor.\n\nThis is general information, not medical advice."]
+};
+const EMG=["chest pain","can't breathe","cannot breathe","can’t breathe","difficulty breathing","severe bleeding","unconscious","stroke","heart attack","seizure","overdose","poison","suicide","kill myself","self harm","self-harm"];
+const EMG_MSG="⚠️ This may be an emergency. Please call your local emergency number right away (India: 112, or 108 for an ambulance) or go to the nearest hospital.\n\nIf you are having thoughts of self-harm, please reach out to someone you trust or a helpline (India: Tele-MANAS 14416).";
+const SYS=`You are a Healthcare Awareness Assistant. Scope: hygiene, nutrition, exercise, sleep, basic mental wellbeing, common illnesses (general info), vaccination awareness, disease prevention.
+Rules: give simple, clear educational answers in short paragraphs or bullets (under 180 words). NEVER diagnose and NEVER prescribe medicines or dosages. For serious symptoms advise seeing a doctor promptly. If the question is not health related, politely say you only cover health awareness. Reply in the same language the user writes in. End with: "This is general information, not medical advice."`;
+const chat=document.getElementById("chat"),q=document.getElementById("q"),go=document.getElementById("go");
+let history=[],sample=null,busy=false;
+function add(text,cls){const d=document.createElement("div");d.className="msg "+cls;d.textContent=text;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+add("Hello! 👋 I’m your healthcare awareness assistant. Ask me about hygiene, nutrition, healthy habits or disease prevention, or tap a topic above.","bot");
+const chips=document.getElementById("chips");
+Object.keys(TOPICS).forEach(k=>{const b=document.createElement("button");b.className="chip";b.type="button";b.textContent=k;b.onclick=()=>ask(TOPICS[k][0],TOPICS[k][1]);chips.appendChild(b)});
+(async()=>{try{if(window.claude)sample=await claude.use("sample")}catch(e){sample=null}})();
+async function ask(text,offline){
+  text=text.trim();if(!text||busy)return;
+  busy=true;go.disabled=true;q.value="";
+  add(text,"me");history.push({role:"user",content:text});
+  const low=text.toLowerCase();
+  if(EMG.some(k=>low.includes(k))){add(EMG_MSG,"bot emg");history.push({role:"assistant",content:EMG_MSG});return done()}
+  const el=add("Thinking…","bot");
+  if(!sample){
+    const r=offline||"The live AI is not available right now. Please try one of the quick topics above.";
+    el.textContent=r;history.push({role:"assistant",content:r});return done();
+  }
+  try{
+    const convo=history.slice(-8).map(m=>(m.role==="user"?"User: ":"Assistant: ")+m.content).join("\n");
+    const res=await sample(SYS+"\n\nConversation so far:\n"+convo+"\n\nReply to the last User message only.",{cache:false,modelTier:"quick",onText:({text})=>{el.textContent=text;chat.scrollTop=chat.scrollHeight}});
+    const out=res.text||"Sorry, I couldn’t generate a response.";
+    el.textContent=out;history.push({role:"assistant",content:out});
+  }catch(e){
+    const r=offline||(e&&e.code==="not_granted"?"Permission for the AI was declined, so I can only answer the quick topics.":"Sorry, something went wrong. Please try again.");
+    el.textContent=r;history.push({role:"assistant",content:r});
+  }
+  done();
+}
+function done(){busy=false;go.disabled=false;chat.scrollTop=chat.scrollHeight;q.focus()}
+document.getElementById("f").addEventListener("submit",e=>{e.preventDefault();ask(q.value)});
+</script>
+</body>
+</html>
